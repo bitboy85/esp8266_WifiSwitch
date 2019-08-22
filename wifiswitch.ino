@@ -442,9 +442,6 @@ void factoryReset(){
   ESP.restart();
 */
   resettrigger = myTZ.dateTime();
-  int               ms_btn_down   = 0;
-int               ms_btn_up     = 0;
-int               btn_timediff  = 0;
 }
 
 /////////////////////////////////////////////////////////
@@ -485,7 +482,6 @@ void SetupSave() {
   String  host;
   String  tmp;
   String  page;
-  //String  tzDBName;
   int     hostlen;
   int     useF;
   int     toffset = 0;
@@ -577,8 +573,9 @@ String createBaseHTML(){
     String html = "";
     html += "<!DOCTYPE HTML>";
     html += "<html>";
-    html +=    "<head><title>Wifi_Switch</title>";
-    html +=    "<link href=\"data:image/png;base64,";
+    html +=    "<head><title>";
+    html +=    chost;
+    html +=    "</title><link href=\"data:image/png;base64,";
     html +=    favico;
     html +=    "\" rel=\"icon\" type=\"image/png\">";
     html +=    "<meta name=\"viewport\" charset=\"UTF-8\" content=\"width=device-width, user-scalable=0, initial-scale=1\">";
@@ -590,7 +587,7 @@ String createBaseHTML(){
     html +=    "text-decoration: none; font-size: 30px; margin: 20px 10px 20px 10px; cursor: pointer;}";
     html +=    ".button2 {background-color: #F08080;}";
     html +=    "input[type=\"checkbox\"], input[type=\"radio\"]{width:22px;height:22px;}";
-    html +=    "label {vertical-align:super;}";
+    html +=    "label {vertical-align:super; margin-left:0px;}";
     html +=    "a, a:visited, a:hover, a:active {text-decoration: none; color:black}";
     html +=    "table {margin: 0px auto; border-bottom: 3px solid grey;width:100%;max-width:400px;border-collapse: collapse;}";
     html +=    "td {text-align:left;}";
@@ -1001,13 +998,13 @@ void loop(void) {
       else {
         turnOn();
       }
-      ms_btn_down = 0;
-      ms_btn_up = 0;
-      btn_timediff = 0;
     }
     else if (btn_timediff > RESET_TIME){
       factoryReset();
     }
+    ms_btn_down = 0;
+    ms_btn_up = 0;
+    btn_timediff = 0;
   }
 
   timer.tick();
