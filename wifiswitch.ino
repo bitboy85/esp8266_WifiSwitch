@@ -169,7 +169,7 @@ void turnOff(){
   if (state != 0){                       //Save value if not already off
     EEPROM.write(21, 0);
     EEPROM.commit();  
-  } //Save value if not restoring
+  }
 
   state = 0;  
 }
@@ -214,7 +214,6 @@ bool IsBitSet(byte toCheck, int pos)
 }
 
 bool CheckTimerTask(void *){
-  //lastcheck = String(myTZ.dateTime());
   int aTimerCount = MAX_TIMER;  
   for (int z = 0; z < aTimerCount; z++) {
     if (aTimerTask[z][0] == 255){continue;} //Skip unused entries
@@ -238,9 +237,13 @@ bool CheckTimerTask(void *){
   return true;
 }
 
-
 void DeleteTimer(int EntryID){
   int i;
+
+  //Input validation
+  if ((EntryID < 0) || (EntryID > MAX_TIMER - 1)){
+    return;
+  }
 
   //Delete from Timer array
   for (i = 0; i<4; i++){
@@ -294,12 +297,24 @@ void SaveTimer(){
 
     if (server.argName(i) == "min"){
       tmin = server.arg(i).toInt();
+      //Input validation
+      if ((tmin < 0) || (tmin > 59)){
+        tmin = 0;
+      }
     }
     else if (server.argName(i) == "sec"){
       tsec = server.arg(i).toInt();
+      //Input validation
+      if ((tsec < 0) || (tsec > 59)){
+        tsec = 0;
+      }
     }
     else if (server.argName(i) == "hour"){
       thour = server.arg(i).toInt();
+      //Input validation
+      if ((thour < 0) || (thour > 24)){
+        thour = 0;
+      }
     }
     else if (server.argName(i) == "mo"){
         if (server.arg(i) == "on") {
@@ -482,6 +497,7 @@ void SetupSave() {
   String  host;
   String  tmp;
   String  page;
+  //String  tzDBName;
   int     hostlen;
   int     useF;
   int     toffset = 0;
@@ -497,6 +513,10 @@ void SetupSave() {
     if (server.argName(i) == "host"){ //handle hostname
       host = server.arg(i);
       hostlen = host.length();
+      if (hostlen > 15) {
+        host = host.substring(0,14);
+        hostlen = 15;  
+      }
       if (hostlen > 0){
         EEPROM.write(0, hostlen);
         for (int x = 0; x < hostlen; x++)  //loop through each character and save it to eeprom
@@ -548,7 +568,7 @@ void SetupSave() {
   page += host;
   page += "\">";
   page += "<meta name=\"viewport\" charset=\"utf-8\" content=\"width=device-width, user-scalable=0, initial-scale=1\">";
-  page += "</head><body>&#8987; Configuration is applied. Automatic redirecting in 10 seconds.&#8987;</br>Saved Values:</br>";
+  page += "</head><body>&#8987; Configuration is applied. Device will reboot. Automatic redirecting in 10 seconds.&#8987;</br>Saved Values:</br>";
   page += "Hostname: ";
   page += host;
   page += "</br>Timezone: ";
@@ -639,7 +659,6 @@ String createBaseHTML(){
 /////////////////////////////
 void handleRoot() {
     String page = createBaseHTML();
-    int offset = EEPROM.read(19);
     String root = "<script type=\"text/javascript\">";
     root +=                "function openURL(url){";
     /*root +=                 "alert(code);" */
@@ -667,8 +686,8 @@ void handleRoot() {
     root +=                  "padding: 15px 40px;font-size:40px;}</style>";
     root +=              "<button class=\"button buttonOnOff\" onClick=\"openURL('H')\">&#x23FB;</button>" ;
     root +=              "<button class=\"button buttonOnOff button2\" onClick=\"openURL('L')\">&#x2B58;</button></br>";
-    root +=              "<button class=\"button buttonOnOff\" ontouchstart=\"openURL('H')\" ontouchend=\"openURL('L')\" style=\"background-color:#FF9966\">&#x23FC;</button>";
-    root +=              "<button class=\"button buttonOnOff\" ontouchstart=\"openURL('L')\" ontouchend=\"openURL('H')\" style=\"background-color:#66CCFF\">&#x23FC;</button>";
+    root +=              "<button class=\"button buttonOnOff\" ontouchstart=\"openURL('H')\" ontouchend=\"openURL('L')\" onmousedown=\"openURL('H')\" onmouseup=\"openURL('L')\" style=\"background-color:#FF9966\">&#x23FC;</button>";
+    root +=              "<button class=\"button buttonOnOff\" ontouchstart=\"openURL('L')\" ontouchend=\"openURL('H')\" onmousedown=\"openURL('L')\" onmouseup=\"openURL('H')\" style=\"background-color:#66CCFF\">&#x23FC;</button>";
     root += "<br>DEBUG reset:";
     root += resettrigger;
 
@@ -682,108 +701,109 @@ void handleRoot() {
 /////////////////////////////
 void WebTimer(){
     String  page = createBaseHTML();
-    int     SchedHour = 0, SchedMin = 0, SchedSec = 0, DoMo = 0, DoTu = 0, DoWe = 0, DoTh = 0, DoFr = 0, DoSa = 0, DoSu = 0;
+    String  timer = "";
+    int     SchedHour = 0, SchedMin = 0, SchedSec = 0;
+    int     DoMo = 0, DoTu = 0, DoWe = 0, DoTh = 0, DoFr = 0, DoSa = 0, DoSu = 0;
     int     actionOn = 1;
     int     TimerCounter = 0;
-    String  root = "";
     int     row;
 
     // Show Current Timer
-    root += "<style>";
-    root += ".tmr0 {background-color:lightyellow;}";
-    root += ".tmr1 {background-color:lightgrey;}";
-    root += "</style>";      
-    root += "<div style=\"width:400px; text-align:left; margin: 0 auto;\"><h3>Current Timer</h3></div>";
-    root += "<table>";
-    root += "<tr><th>Time</th><th>Days</th><th>Action</th><th class=\"tdc\">Delete</th></tr>";
+    timer += "<style>";
+    timer += ".tmr0 {background-color:lightyellow;}";
+    timer += ".tmr1 {background-color:lightgrey;}";
+    timer += "</style>";      
+    timer += "<div style=\"width:400px; text-align:left; margin: 0 auto;\"><h3>Current Timer</h3></div>";
+    timer += "<table>";
+    timer += "<tr><th>Time</th><th>Days</th><th>Action</th><th class=\"tdc\">Delete</th></tr>";
     for (int i = 0; i < MAX_TIMER; i++) {
       if (aTimerTask[i][0] == 255){continue;}   // skip unused
         row = i % 2;
-        root += "<tr class=\"tmr";
-        root += row;
-        root += "\"><td>";
-        root += AddLZero(aTimerTask[i][0]);
-        root += ":";
-        root += AddLZero(aTimerTask[i][1]);
-        root += ":";
-        root += AddLZero(aTimerTask[i][2]);
-        root += "</td><td>";
-        root += GetDays(aTimerTask[i][3]);
-        root += "</td><td>";
-        root += GetAction(aTimerTask[i][3]);
-        root += "</td><td class=\"tdc fsl\">";
-        root += "<a href= \"/DeleteTimer?id=";
-        root += i;
-        root += "\">&#10060;</a>";
-        root += "</td></tr>";
+        timer += "<tr class=\"tmr";
+        timer += row;
+        timer += "\"><td>";
+        timer += AddLZero(aTimerTask[i][0]);
+        timer += ":";
+        timer += AddLZero(aTimerTask[i][1]);
+        timer += ":";
+        timer += AddLZero(aTimerTask[i][2]);
+        timer += "</td><td>";
+        timer += GetDays(aTimerTask[i][3]);
+        timer += "</td><td>";
+        timer += GetAction(aTimerTask[i][3]);
+        timer += "</td><td class=\"tdc fsl\">";
+        timer += "<a href= \"/DeleteTimer?id=";
+        timer += i;
+        timer += "\">&#10060;</a>";
+        timer += "</td></tr>";
         TimerCounter += 1;    
     }
-    root += "</table>";
+    timer += "</table>";
 
     //Hide form is maximum Timer is reached
     if (TimerCounter < MAX_TIMER){
-      root += "<form action=\"/SaveTimer\">";
-      root += "<table>";
+      timer += "<form action=\"/SaveTimer\">";
+      timer += "<table>";
   
-      root += "<tr>";
-      root += "<td>Time ";
-      root += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"24\" type=\"number\" name=\"hour\" value=\"";
-      root +=   SchedHour;
-      root +=   "\">";
-      root += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"59\" type=\"number\" name=\"min\" value=\"";
-      root +=   SchedMin;
-      root +=   "\">";
-      root += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"59\" type=\"number\" name=\"sec\" value=\"";
-      root +=   SchedSec;
-      root +=   "\">";
-      root += "</td>";
-      root += "<td><label>Action </label>";
-      root += "<input type=\"radio\" id=\"on\" name=\"action\" value=\"on\"";
-        if (actionOn == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"on\">On</label>";
-      root += "<input type=\"radio\" id=\"off\" name=\"action\" value=\"off\"";
-        if (actionOn != 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"off\">Off</label>"; 
-      root += "</td></tr>";
-      root += "<tr><td colspan=\"2\">";    
-      root += "<input type=\"checkbox\" id=\"mo\" name=\"mo\"";
-        if (DoMo == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"mo\">Mo</label>";
-      root += "<input type=\"checkbox\" id=\"tu\" name=\"tu\"";
-        if (DoTu == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"tu\">Tu</label>";    
-      root += "<input type=\"checkbox\" id=\"we\" name=\"we\"";
-        if (DoWe == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"we\">We</label>";   
-      root += "<input type=\"checkbox\" id=\"th\" name=\"th\"";
-        if (DoTh == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"th\">Th</label>";   
-      root += "<input type=\"checkbox\" id=\"fr\" name=\"fr\"";
-        if (DoFr == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"fr\">Fr</label>";
-      root += "<input type=\"checkbox\" id=\"sa\" name=\"sa\"";
-        if (DoSa == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"sa\">Sa</label>";    
-      root += "<input type=\"checkbox\" id=\"su\" name=\"su\"";
-        if (DoSu == 1){root += " checked";}  
-      root += ">";
-      root += "<label for=\"su\">Su</label>";   
-      root += "</td></tr>";
+      timer += "<tr>";
+      timer += "<td>Time ";
+      timer += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"24\" type=\"number\" name=\"hour\" value=\"";
+      timer +=   SchedHour;
+      timer +=   "\">";
+      timer += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"59\" type=\"number\" name=\"min\" value=\"";
+      timer +=   SchedMin;
+      timer +=   "\">";
+      timer += "<input style=\"width:40px;height:30px;\" autocomplete=\"off\" min=\"0\" max=\"59\" type=\"number\" name=\"sec\" value=\"";
+      timer +=   SchedSec;
+      timer +=   "\">";
+      timer += "</td>";
+      timer += "<td><label>Action </label>";
+      timer += "<input type=\"radio\" id=\"on\" name=\"action\" value=\"on\"";
+      //  if (actionOn == 1){root += " checked";}  
+      timer += ">";
+      timer += "<label for=\"on\">On</label>";
+      timer += "<input type=\"radio\" id=\"off\" name=\"action\" value=\"off\"";
+      //  if (actionOn != 1){root += " checked";}  
+      timer += ">";
+      timer += "<label for=\"off\">Off</label>"; 
+      timer += "</td></tr>";
+      timer += "<tr><td colspan=\"2\">";    
+      timer += "<input type=\"checkbox\" id=\"mo\" name=\"mo\"";
+      //  if (DoMo == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"mo\">Mo</label>";
+      timer += "<input type=\"checkbox\" id=\"tu\" name=\"tu\"";
+      //  if (DoTu == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"tu\">Tu</label>";    
+      timer += "<input type=\"checkbox\" id=\"we\" name=\"we\"";
+      //  if (DoWe == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"we\">We</label>";   
+      timer += "<input type=\"checkbox\" id=\"th\" name=\"th\"";
+      //  if (DoTh == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"th\">Th</label>";   
+      timer += "<input type=\"checkbox\" id=\"fr\" name=\"fr\"";
+      //  if (DoFr == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"fr\">Fr</label>";
+      timer += "<input type=\"checkbox\" id=\"sa\" name=\"sa\"";
+      //  if (DoSa == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"sa\">Sa</label>";    
+      timer += "<input type=\"checkbox\" id=\"su\" name=\"su\"";
+      //  if (DoSu == 1){timer += " checked";}  
+      timer += ">";
+      timer += "<label for=\"su\">Su</label>";   
+      timer += "</td></tr>";
       
-      root += "</table>";
-      root += "<input class=\"button\" type=\"submit\" value=\"Create schedule\">";
-      root += "</form>";
+      timer += "</table>";
+      timer += "<input class=\"button\" type=\"submit\" value=\"Create schedule\">";
+      timer += "</form>";
     }
 
-    page.replace("%HC%", root );
+    page.replace("%HC%", timer );
     server.send(200, "text/html", page);
 }
 
@@ -792,48 +812,48 @@ void WebTimer(){
 /////////////////////////////
 void handleSetup() {
     String page = createBaseHTML();
-    String root = "";
-    root += "<style>.tdl {padding-right:0px;}";
-    root += ".tdr {text-align:right;}</style>";
-    root += "<form action=\"/Save\">";
-    root += "<table>";
-    root +=   "<tr><td class=\"tdl\">Hostname</td><td><input style=\"margin-top:6px;\" autocomplete=\"off\" maxlength=\"15\" type=\"text\" name=\"host\" value=\"";
-    root +=   chost;
-    root +=   "\"></td></tr>";
-    root +=   "<tr><td class=\"tdl\">Timezone (<a style=\"color:blue;\" href=\"https://en.wikipedia.org/wiki/List_of_tz_database_time_zones\">Wiki</a>)</td><td><input style=\"margin-top:6px;\" maxlength=\"20\" type=\"text\" name=\"tzDBName\" value=\"";
-    root +=   tzDBName;
-    root +=   "\"></td></tr>";
-    root +=   "<tr><td class=\"tdl\">Startup state</td><td class=\"tdl\">";
+    String settings = "";
+    settings += "<style>.tdl {padding-right:0px;}";
+    settings += ".tdr {text-align:right;}</style>";
+    settings += "<form action=\"/Save\">";
+    settings += "<table>";
+    settings +=   "<tr><td class=\"tdl\">Hostname</td><td><input style=\"margin-top:6px;\" autocomplete=\"off\" maxlength=\"15\" type=\"text\" name=\"host\" value=\"";
+    settings +=   chost;
+    settings +=   "\"></td></tr>";
+    settings +=   "<tr><td class=\"tdl\">Timezone (<a style=\"color:blue;\" href=\"https://en.wikipedia.org/wiki/List_of_tz_database_time_zones\">Wiki</a>)</td><td><input style=\"margin-top:6px;\" maxlength=\"20\" type=\"text\" name=\"tzDBName\" value=\"";
+    settings +=   tzDBName;
+    settings +=   "\"></td></tr>";
+    settings +=   "<tr><td class=\"tdl\">Startup state</td><td class=\"tdl\">";
 
-    root += "<input style=\"margin-left:0px;\" type=\"radio\" id=\"stuon\" name=\"stuact\" value=\"stuon\"";
-    if (startupAction == 1){root += " checked";}  
-    root += ">";
-    root += "<label for=\"stuon\">On</label>";
-    root += "<input type=\"radio\" id=\"stuoff\" name=\"stuact\" value=\"stuoff\"";
-    if (startupAction == 0){root += " checked";}  
-    root += ">";
-    root += "<label for=\"stuoff\">Off</label>";
-    root += "<input type=\"radio\" id=\"stures\" name=\"stuact\" value=\"stures\"";
-    if (startupAction == 2){root += " checked";}  
-    root += ">";
-    root += "<label for=\"stures\">Restore</label>";
+    settings += "<input style=\"margin-left:0px;\" type=\"radio\" id=\"stuon\" name=\"stuact\" value=\"stuon\"";
+    if (startupAction == 1){settings += " checked";}  
+    settings += ">";
+    settings += "<label for=\"stuon\">On</label>";
+    settings += "<input type=\"radio\" id=\"stuoff\" name=\"stuact\" value=\"stuoff\"";
+    if (startupAction == 0){settings += " checked";}  
+    settings += ">";
+    settings += "<label for=\"stuoff\">Off</label>";
+    settings += "<input type=\"radio\" id=\"stures\" name=\"stuact\" value=\"stures\"";
+    if (startupAction == 2){settings += " checked";}  
+    settings += ">";
+    settings += "<label for=\"stures\">Restore</label>";
      
-    root +=   "</td></tr>"; 
-    root +=   "<tr><td class=\"tdl\">Temperature correction</td><td><input autocomplete=\"off\" maxlength=\"4\" type=\"text\" name=\"toffset\" value=\"";
-    root +=   dsbOffset;
-    root +=   "\"></td></tr>";
-    root +=   "<tr><td class=\"tdl\">Temperature unit</td>";
-    root +=       "<td class=\"tdl\"> <select name=\"tunit\">"; 
-    root +=            "<option value=\"C\">C</option>";
-    root +=            "<option ";
-    if (useFahrenheit == 1){root += "selected ";}
-    root +=   "value=\"F\">F</option>";
-    root +=        "</select></td></tr>";
-    root +=   "<tr><td class=\"tdl\"></td><td class=\"tdl\"></td></tr>";
-    root += "</table>";
-    root += "<input class=\"button\" style=\"margin-left:5px;\" type=\"submit\" value=\"Save\"><a href= \"/\"><input style=\"margin-right:5px;\" class=\"button button2\" type=\"button\" value=\"Cancel\"></a>";
-    root += "</form>";          
-    page.replace("%HC%", root );
+    settings +=   "</td></tr>"; 
+    settings +=   "<tr><td class=\"tdl\">Temperature correction</td><td><input autocomplete=\"off\" maxlength=\"4\" type=\"text\" name=\"toffset\" value=\"";
+    settings +=   dsbOffset;
+    settings +=   "\"></td></tr>";
+    settings +=   "<tr><td class=\"tdl\">Temperature unit</td>";
+    settings +=       "<td class=\"tdl\"> <select name=\"tunit\">"; 
+    settings +=            "<option value=\"C\">C</option>";
+    settings +=            "<option ";
+    if (useFahrenheit == 1){settings += "selected ";}
+    settings +=   "value=\"F\">F</option>";
+    settings +=        "</select></td></tr>";
+    settings +=   "<tr><td class=\"tdl\"></td><td class=\"tdl\"></td></tr>";
+    settings += "</table>";
+    settings += "<input class=\"button\" style=\"margin-left:5px;\" type=\"submit\" value=\"Save\"><a href= \"/\"><input style=\"margin-right:5px;\" class=\"button button2\" type=\"button\" value=\"Cancel\"></a>";
+    settings += "</form>";          
+    page.replace("%HC%", settings );
     server.send(200, "text/html", page);
 }
 
@@ -998,18 +1018,21 @@ void loop(void) {
       else {
         turnOn();
       }
+      ms_btn_down = 0;
+      ms_btn_up = 0;
+      btn_timediff = 0;
     }
     else if (btn_timediff > RESET_TIME){
+      ms_btn_down = 0;
+      ms_btn_up = 0;
+      btn_timediff = 0;
       factoryReset();
     }
-    ms_btn_down = 0;
-    ms_btn_up = 0;
-    btn_timediff = 0;
   }
 
   timer.tick();
   
   //Handle Time Events
   //events();
-  delay(1); // Allow to go into sleep, seems not working without delay command
+  delay(5); // Allow to go into sleep, seems not working without delay command
 }
