@@ -11,7 +11,7 @@ It might be useful for beginner just to see different techniques to show an icon
 - Define a hostname and timezone
 - On / Off over webpage / HTTP Request
 - Press and Hold On / Off ~~(only on touch devices)~~
-- On / Off using hardware buitton
+- On / Off using hardware button
 - Factory Reset using hardware button
 - Weekly timer, up to 20 timer for each day of the week
 - Reading Temperature if DS18B20 is installed
@@ -23,12 +23,14 @@ On first startup or after factory reset, the device creates its own wifi ssid ca
 So just open http://wifiswitch in your browser. Every menu should be self explanatory so i skip this part here.
 
 **Special urls:**
-http://wifiswitch/H     Turns relay on
-http://wifiswitch/L     Turns relay off
-http://wifiswitch/S     Returns relay state in json format
-http://wifiswitch/T     Returns temperature in json format (if a ds18b20 is connected of course)
-http://wifiswitch/I     Returns current firmware in json format
-http://wifiswitch/Debug Shows a page with all variables and EEPROM values
+<pre>
+- http://wifiswitch/H       Turns relay on
+- http://wifiswitch/L       Turns relay off
+- http://wifiswitch/S       Returns relay state in json format
+- http://wifiswitch/T       Returns temperature in json format (if a ds18b20 is connected of course)
+- http://wifiswitch/I       Returns current firmware in json format
+- http://wifiswitch/Debug   Shows a page with all variables and EEPROM values
+</pre>
 
 ## ToDos (hope somebody will help at those points)
 - improve HTTP / CSS: Every improvement is welcome. I'm not good at design.
