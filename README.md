@@ -24,12 +24,12 @@ So just open http://wifiswitch in your browser. Every menu should be self explan
 
 **Special urls:**
 <pre>
-- http://wifiswitch/H       Turns relay on
-- http://wifiswitch/L       Turns relay off
-- http://wifiswitch/S       Returns relay state in json format
-- http://wifiswitch/T       Returns temperature in json format (if a ds18b20 is connected of course)
-- http://wifiswitch/I       Returns current firmware in json format
-- http://wifiswitch/Debug   Shows a page with all variables and EEPROM values
+http://wifiswitch/H       Turns relay on
+http://wifiswitch/L       Turns relay off
+http://wifiswitch/S       Returns relay state in json format
+http://wifiswitch/T       Returns temperature in json format (if a ds18b20 is connected of course)
+http://wifiswitch/I       Returns current firmware in json format
+http://wifiswitch/Debug   Shows a page with all variables and EEPROM values
 </pre>
 
 ## ToDos (hope somebody will help at those points)
